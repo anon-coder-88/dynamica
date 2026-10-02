@@ -1,13 +1,13 @@
 import { network } from "hardhat";
 import { parseUnits, formatUnits, getAddress } from "ethers";
 
-const { ethers } = await network.create();
+const { ethers, networkName } = await network.create();
 const chain = await ethers.provider.getNetwork();
-if (chain.chainId !== 46630n) throw Error("This script only writes on Robinhood Testnet");
+if (chain.chainId !== 46630n && !(networkName === "localhost" && chain.chainId === 31337n)) throw Error("Use Robinhood Testnet or the explicit localhost demo network");
 const address = getAddress(process.env.DYNAMICA_VAULT_ADDRESS ?? "");
 const amount = parseUnits(process.env.DYNAMICA_AMOUNT ?? "1", 18);
 const [signer] = await ethers.getSigners();
-const vault = await ethers.getContractAt("DynamicaVault", address, signer);
+const vault = await ethers.getContractAt("DynamicaStrategyVault", address, signer);
 const asset = await ethers.getContractAt("DynamicaTestAsset", await vault.asset(), signer);
 const account = await signer.getAddress();
 const action = process.env.DYNAMICA_ACTION ?? "status";
@@ -19,7 +19,11 @@ else if (action === "deposit") {
 } else if (action === "withdraw") {
   if (amount > await vault.maxWithdraw(account)) throw Error("Insufficient withdrawable assets");
   await (await vault.withdraw(amount, account, account)).wait();
-} else if (action !== "status") throw Error("Use status, claim, deposit, or withdraw");
+} else if (action === "rebalance") {
+  const preview = await vault.previewRebalance();
+  if (preview[2] !== 0n) throw Error(`Execution blocked: reason ${preview[2]}`);
+  await (await vault.rebalance(await vault.policyVersion(), preview[1])).wait();
+} else if (action !== "status") throw Error("Use status, claim, deposit, withdraw, or rebalance");
 console.log(JSON.stringify({ chainId: chain.chainId.toString(), vault: address,
   assetBalance: formatUnits(await asset.balanceOf(account), 18),
   shares: formatUnits(await vault.balanceOf(account), 18),

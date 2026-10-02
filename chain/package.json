@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "hardhat build",
-    "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.ts",
-    "deploy:testnet": "hardhat run scripts/deploy.ts --network robinhoodTestnet",
-    "interact:testnet": "hardhat run scripts/interact.ts --network robinhoodTestnet"
+    "test": "hardhat test solidity",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:testnet": "node --env-file=../.env ./node_modules/hardhat/dist/src/cli.js run scripts/deploy.ts --network robinhoodTestnet",
+    "interact:testnet": "node --env-file=../.env ./node_modules/hardhat/dist/src/cli.js run scripts/interact.ts --network robinhoodTestnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.0",

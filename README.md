@@ -1,54 +1,65 @@
-# Dynamica MVP · Robinhood Testnet
+# Dynamica utility MVP
 
-The existing Dynamica website is reused. The new live testnet section in **Strategy vaults** connects its existing EIP-6963 wallet selector to two contracts. A wallet can claim 100 valueless dTEST once, approve an exact amount, deposit into an ERC-4626 vault, receive shares, and withdraw assets. The owner can cap or pause deposits; withdrawals remain open. All other strategy cards are still local simulations. No yield, autonomous execution, fees, or production financial promise is implemented.
+A Robinhood Chain testnet MVP derived from the Dynamica PRD: **capped strategy vaults with bounded operator permissions**.
 
-**Status:** source code MVP, not audited and not deployed by this repository. Do not use valuable assets. The existing Token Studio remains separate from the dTEST faucet token.
+Users claim valueless `dTEST`, approve an exact amount, deposit for ERC-4626 shares and withdraw. The owner can configure an operator's reserve target, per-call limit, window budget, cooldown and expiry; pause execution or deposits; or revoke the operator. Operators can move assets only between the vault and its fixed liquid reserve. Factory records and execution events provide onchain provenance.
 
-## Requirements
+This is a tested source MVP, not a deployed or audited production protocol. There is no investment yield, trading integration or background operator service. `dTEST` is a test fixture, not Dynamica's native token.
 
-Node.js 22+, npm, pnpm (for the existing website), Python 3.10+, a browser EVM wallet, and Robinhood Testnet ETH for gas. Robinhood Testnet uses chain ID **46630**. Contract addresses are intentionally absent until you deploy.
+## Original website
 
-## Contracts
+The full existing website is preserved on [`website-source`](https://github.com/anon-coder-88/dynamica/tree/website-source). `main` extracts its existing wallet selector, provider logic, vault transaction component, brand assets and UI components into a focused utility app. The hosted marketing website has not been replaced.
+
+## Install and verify
+
+Use Node.js 24, npm and Python 3.10+.
 
 ```sh
-cd chain
 npm ci
+npm ci --prefix chain
 npm run build
-XDG_CACHE_HOME=/tmp/dynamica-hardhat-cache npx hardhat run scripts/smoke.ts
+npm --prefix chain run build
+npm run test:contracts
+npm run check:languages
+cd chain
+npx hardhat run scripts/smoke.ts
+cd ..
 ```
 
-If the compiler cache is writable normally, omit `XDG_CACHE_HOME`. Deployment requires a throwaway funded testnet wallet. Copy `.env.example` to `.env` in the repository root, fill `DEPLOYER_PRIVATE_KEY` and optionally `RH_TESTNET_RPC_URL`, then load those variables into your shell. For example, use `set -a; source .env; set +a` in Bash, taking care that your shell history and environment are private. From `chain/`, run `npm run deploy:testnet`. Record both output addresses; set `NEXT_PUBLIC_DYNAMICA_ASSET_ADDRESS`, `NEXT_PUBLIC_DYNAMICA_VAULT_ADDRESS`, and `DYNAMICA_VAULT_ADDRESS` in `.env`. Do not commit `.env`.
+The Solidity suite has 94 tests, including five fuzz tests with 256 runs each. Solidity source, including its tests, exceeds 50% of authored code bytes; see [verification](docs/VERIFICATION.md). No language overrides, duplicated contracts or vendored Solidity are used to inflate that share.
 
-Interaction example from `chain/` after environment variables are loaded: `DYNAMICA_ACTION=status npm run interact:testnet`. Other actions: `claim`, `deposit`, `withdraw`; set `DYNAMICA_AMOUNT` for the latter two. Each transaction requires gas.
+## Deploy to Robinhood Testnet
 
-## Website
+1. Copy `.env.example` to `.env` and set `DEPLOYER_PRIVATE_KEY` for a testnet-only account. Never commit it. Fund that account with testnet ETH from the [official faucet](https://faucet.testnet.chain.robinhood.com).
+2. Run `npm --prefix chain run deploy:testnet`. This creates the test asset, factory, strategy vault and reserve. No operator is enabled by deployment.
+3. Copy the printed asset/vault addresses into the public address fields and `DYNAMICA_VAULT_ADDRESS` in `.env`.
+4. Run `npm run dev`, open the printed local URL, connect a wallet, switch to Robinhood Testnet and claim test assets. Review approval, deposit and withdrawal separately.
+5. Connect as the deployed vault owner to authorize an operator policy. Connect as that operator to review a rebalance. Pause/revoke remain owner actions. A scheduler must submit transactions for continuous execution.
 
-Return to the repository root with `cd ..` after the contract commands.
+Default network: chain ID **46630**, ETH gas, `https://rpc.testnet.chain.robinhood.com`. Mainnet deployment is blocked by the deployment script.
 
-```sh
-pnpm install --frozen-lockfile
-# Load .env or create .env.local with the public address variables
-pnpm dev
-```
+For CLI actions, set `DYNAMICA_ACTION` to `status`, `claim`, `deposit`, `withdraw` or `rebalance`, then run `npm --prefix chain run interact:testnet`. `DYNAMICA_AMOUNT` uses 18-decimal dTEST units in human-readable form.
 
-Open `/app?view=vaults`. The live vault section appears above the original demo vault catalog. The deployment addresses must match the contracts on Robinhood Testnet. Confirm wallet requests and inspect receipts; an approval is a separate transaction. The build command is `pnpm build`. The original website code, assets, public pages, Token Studio, and demo workflows are retained. `public/contract-guide.html` is a plain HTML summary.
-
-## Python read helper
+## Read with Python
 
 ```sh
 python -m venv .venv
 . .venv/bin/activate
 pip install -r python/requirements.txt
-# Export DYNAMICA_VAULT_ADDRESS and optionally DYNAMICA_ACCOUNT_ADDRESS
+# Set DYNAMICA_VAULT_ADDRESS and optionally DYNAMICA_ACCOUNT_ADDRESS
 python python/vault_status.py
 ```
 
-It reads public chain state and never signs. Values are raw integer units with the returned share decimals; do not interpret them as market prices.
+The helper reads public state and never signs. It reads environment variables from your shell, not `.env` automatically. Outputs are raw integer units, not market prices. `DYNAMICA_LOCAL=1` permits an explicit local chain (31337) when `RH_TESTNET_RPC_URL` points to it.
 
-## Notes
+## Files and limits
 
-The vault holds a test ERC-20 and issues redeemable shares. There is no strategy executor, price oracle, return model, or automated yield. Admin capacity and deposit pause are limited controls, not a protocol security review. The dTEST faucet token is not Dynamica's native token. Review and audit contracts and product policies before any production or mainnet use.
+- `chain/contracts/`: original capped vault and test asset; new policy vault, fixed reserve and factory.
+- `chain/test/`: accounting, operator policy, adversarial transfer and factory tests.
+- `chain/scripts/`: TypeScript deploy, interaction and local integration scripts.
+- `components/`, `web/`, `index.html`: reused React wallet/vault code plus the utility shell and operator controls.
+- `python/`: web3.py read helper; `scripts/`: JavaScript ABI export and language-share checks.
 
-## GitHub upload
+Only standard, non-rebasing ERC-20 assets are supported. Transfer fees are rejected. Owners can replace policies immediately, which resets the budget. Targets are rebalancing goals, not a continuously enforced reserve ratio. The fixed reserve is fully liquid; operators cannot choose arbitrary calls or destinations. See [PRD scope mapping](docs/MVP.md).
 
-Create an empty repository on GitHub without a generated README. From this folder: `git init`, `git add .`, `git commit -m "Initial Dynamica MVP"`, `git branch -M main`, `git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git`, then `git push -u origin main`. Check `git status` and confirm `.env` and `node_modules` are not staged before committing.
+MIT license. Third-party dependencies retain their own licenses; wallet marks identify their respective providers.

@@ -55,6 +55,7 @@ export function LiveVault(){
  const prepare=(requested:Action)=>{
   if(!ready||!w.address||!data||!vault){setError('Connect on Robinhood Testnet and refresh the vault first.');return;}
   try{
+   if(requested!=='claim'&&(!/^\d+(\.\d+)?$/.test(amount.trim())||(amount.trim().split('.')[1]?.length||0)>data.decimals))throw Error('Enter a positive amount within the asset decimal precision.');
    const value=requested==='claim'?0n:parseUnits(amount.trim(),data.decimals);
    if(requested!=='claim'&&value<=0n)throw Error('Enter a positive amount.');
    if(requested==='claim'&&data.claimed)throw Error('This wallet has already claimed its test asset.');
@@ -99,7 +100,7 @@ export function LiveVault(){
  let parsed:bigint|null=null;
  try{if(data&&amount.trim())parsed=parseUnits(amount.trim(),data.decimals);}catch{}
  const approvalNeeded=parsed!==null&&parsed>data!.allowance;
- return <section className="live-vault" aria-labelledby="live-vault-title"><div className="live-vault-head"><div><span className="eyebrow">LIVE CONTRACT UTILITY · TESTNET</span><h2 id="live-vault-title">Dynamica test vault</h2><p>Claim a valueless test asset, deposit it for vault shares, and withdraw it. Assets remain in this vault; no strategy or yield is active.</p></div><span className="pill live">Robinhood Testnet</span></div>
+ return <section className="live-vault" aria-labelledby="live-vault-title"><div className="live-vault-head"><div><span className="eyebrow">LIVE CONTRACT UTILITY · TESTNET</span><h2 id="live-vault-title">Dynamica test vault</h2><p>Claim a valueless test asset, deposit it for vault shares, and withdraw it. An authorized operator can rebalance between idle custody and the fixed liquid reserve. No investment yield is active.</p></div><span className="pill live">Robinhood Testnet</span></div>
  {!configured?<p className="vault-message">Deployment addresses are not configured. Deploy the contracts, then set the two NEXT_PUBLIC_DYNAMICA addresses in your local environment and restart the site.</p>:<>
  <div className="vault-facts"><div><span>Vault</span><code title={vault||''}>{vault?.slice(0,8)}…{vault?.slice(-6)}</code></div><div><span>Asset</span><code title={asset||''}>{asset?.slice(0,8)}…{asset?.slice(-6)}</code></div><div><span>Network</span><strong>46630 · ETH gas</strong></div></div>
  {!w.address?<button className="vault-primary" onClick={openWalletDialog}>Connect Wallet</button>:w.chainId!==testnet.id?<button className="vault-primary" disabled={w.busy} onClick={()=>void w.switchNetwork()}>Switch to Robinhood Testnet</button>:!data?<button className="vault-primary" onClick={()=>void refresh()}>Retry vault read</button>:<>

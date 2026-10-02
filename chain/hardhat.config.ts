@@ -9,6 +9,7 @@ export default defineConfig({
     settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: "cancun" },
   },
   networks: {
+    localhost: {type: "http", chainType: "l1", url: "http://127.0.0.1:8545"},
     robinhoodTestnet: {
       type: "http", chainType: "l1",
       url: configVariable("RH_TESTNET_RPC_URL"),

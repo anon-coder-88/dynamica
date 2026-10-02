@@ -11,18 +11,25 @@ ACCOUNT = os.environ.get("DYNAMICA_ACCOUNT_ADDRESS", "")
 if not Web3.is_address(VAULT):
     sys.exit("Set DYNAMICA_VAULT_ADDRESS to a deployed testnet vault")
 w3 = Web3(Web3.HTTPProvider(RPC, request_kwargs={"timeout": 12}))
-if w3.eth.chain_id != 46630:
+chain_id = w3.eth.chain_id
+if chain_id != 46630 and not (os.environ.get("DYNAMICA_LOCAL") == "1" and chain_id == 31337):
     sys.exit("RPC is not Robinhood Testnet (46630)")
 abi = json.loads((Path(__file__).parent / "vault_read_abi.json").read_text())
 vault = w3.eth.contract(address=Web3.to_checksum_address(VAULT), abi=abi)
 asset = vault.functions.asset().call()
 decimals = vault.functions.decimals().call()
-result = {"chain_id": 46630, "vault": VAULT, "asset": asset,
+result = {"chain_id": chain_id, "vault": VAULT, "asset": asset,
           "total_assets": str(vault.functions.totalAssets().call()),
           "share_supply": str(vault.functions.totalSupply().call()),
           "asset_cap": str(vault.functions.assetCap().call()),
           "deposits_paused": vault.functions.depositsPaused().call(),
-          "share_decimals": decimals}
+          "share_decimals": decimals,
+          "idle_assets": str(vault.functions.idleAssets().call()),
+          "reserve": vault.functions.reserve().call(),
+          "policy_version": str(vault.functions.policyVersion().call()),
+          "window_remaining": str(vault.functions.windowRemaining().call()),
+          "execution_paused": vault.functions.executionPaused().call(),
+          "rebalance_preview": [str(x) for x in vault.functions.previewRebalance().call()]}
 if ACCOUNT:
     if not Web3.is_address(ACCOUNT):
         sys.exit("DYNAMICA_ACCOUNT_ADDRESS is invalid")
