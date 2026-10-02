@@ -1,0 +1,10 @@
+import solc from 'solc';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+const source = fs.readFileSync('contracts/DynamicaToken.sol','utf8');
+const input = {language:'Solidity',sources:{'DynamicaToken.sol':{content:source}},settings:{optimizer:{enabled:true,runs:200},evmVersion:'paris',outputSelection:{'*':{'*':['abi','evm.bytecode.object']}}}};
+const output = JSON.parse(solc.compile(JSON.stringify(input),{import:path=>({contents:fs.readFileSync('node_modules/'+path,'utf8')})}));
+if(output.errors?.some(e=>e.severity==='error')) throw Error(JSON.stringify(output.errors));
+const c = output.contracts['DynamicaToken.sol'].DynamicaToken;
+fs.writeFileSync('lib/token-artifact.json', JSON.stringify({abi:c.abi,bytecode:'0x'+c.evm.bytecode.object,compiler:solc.version(),sourceHash:crypto.createHash('sha256').update(source).digest('hex'),openzeppelin:'5.6.1'},null,2));
+console.log('Compiled fixed-supply ERC20,', c.evm.bytecode.object.length/2,'bytes');

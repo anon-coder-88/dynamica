@@ -1,0 +1,20 @@
+{
+  "name": "dynamica-chain-mvp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "hardhat build",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network robinhoodTestnet",
+    "interact:testnet": "hardhat run scripts/interact.ts --network robinhoodTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.0",
+    "@openzeppelin/contracts": "5.6.1",
+    "ethers": "^6.15.0",
+    "hardhat": "^3.0.0",
+    "solc": "0.8.37",
+    "typescript": "^5.9.3"
+  }
+}

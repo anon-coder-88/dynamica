@@ -1,0 +1,28 @@
+import { network } from "hardhat";
+import { strict as assert } from "node:assert";
+import { parseUnits } from "ethers";
+
+const { ethers } = await network.create();
+const [owner, user] = await ethers.getSigners();
+const asset = await ethers.deployContract("DynamicaTestAsset");
+await asset.waitForDeployment();
+const vault = await ethers.deployContract("DynamicaVault", [await asset.getAddress(), parseUnits("200",18), await owner.getAddress()]);
+await vault.waitForDeployment();
+const account = await user.getAddress();
+await (await asset.connect(user).getFunction("claim")()).wait();
+assert.equal(await asset.balanceOf(account), parseUnits("100",18));
+await assert.rejects(asset.connect(user).getFunction("claim")());
+await (await asset.connect(user).getFunction("approve")(await vault.getAddress(), parseUnits("100",18))).wait();
+await (await vault.connect(user).getFunction("deposit")(parseUnits("60",18), account)).wait();
+assert.equal(await vault.balanceOf(account), parseUnits("60",18));
+assert.equal(await vault.maxWithdraw(account), parseUnits("60",18));
+await (await vault.connect(user).getFunction("withdraw")(parseUnits("20",18), account, account)).wait();
+assert.equal(await asset.balanceOf(account), parseUnits("60",18));
+assert.equal(await vault.totalAssets(), parseUnits("40",18));
+await assert.rejects(vault.connect(user).getFunction("setDepositsPaused")(true));
+await (await vault.setDepositsPaused(true)).wait();
+assert.equal(await vault.maxDeposit(account), 0n);
+await assert.rejects(vault.connect(user).getFunction("deposit")(1n, account));
+await (await vault.connect(user).getFunction("withdraw")(parseUnits("40",18), account, account)).wait();
+assert.equal(await vault.totalAssets(), 0n);
+console.log("Faucet, authorization, cap, pause, and full withdrawal smoke passed.");

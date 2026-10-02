@@ -1,0 +1,8 @@
+const routes=new Set(['/','/app','/ecosystem','/token','/docs','/risks']);
+export function transitionDestination(href:string,current:string,options:{button?:number;modified?:boolean;target?:string|null;download?:boolean;prevented?:boolean}={}):string|null{
+ if(options.prevented||options.modified||options.download||(options.button??0)!==0||(options.target&&options.target!=='_self'))return null;
+ try{const from=new URL(current),to=new URL(href,from);if(!['http:','https:'].includes(to.protocol)||to.origin!==from.origin||!routes.has(to.pathname))return null;if(to.pathname===from.pathname&&to.search===from.search)return null;return to.href;}catch{return null;}
+}
+
+// Runs before first paint. If hydration fails, the independent timer releases the page.
+export const pageTransitionBoot=`(()=>{try{let motion=!matchMedia('(prefers-reduced-motion: reduce)').matches;try{motion=motion&&localStorage.getItem('dynamica:motion')!=='off'}catch{}if(!motion)return;let incoming=false;try{const saved=JSON.parse(sessionStorage.getItem('dynamica:arrival')||'null');incoming=!!saved&&saved.path===location.pathname+location.search&&Date.now()-saved.at<10000;sessionStorage.removeItem('dynamica:arrival')}catch{}document.documentElement.dataset.pageLoading=incoming?'incoming':'initial';setTimeout(()=>{if(!['initial','incoming'].includes(document.documentElement.dataset.pageLoading))return;delete document.documentElement.dataset.pageLoading;const content=document.getElementById('site-content');if(content?.hasAttribute('data-intro-inert')){content.removeAttribute('inert');content.removeAttribute('data-intro-inert')}},5500)}catch{}})();`;

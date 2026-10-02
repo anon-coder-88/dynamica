@@ -1,0 +1,110 @@
+[
+  {
+    "selector": "[data-slot=\"button\"][data-variant=\"default\"]",
+    "foreground": "#10190d",
+    "background": "#ddfa86",
+    "ratio": "15.51"
+  },
+  {
+    "selector": "[data-slot=\"button\"][data-variant=\"default\"]:hover",
+    "foreground": "#10190d",
+    "background": "#edffb9",
+    "ratio": "16.80"
+  },
+  {
+    "selector": "[data-slot=\"button\"][data-variant=\"secondary\"]",
+    "foreground": "#fff",
+    "background": "#293d48",
+    "ratio": "11.32"
+  },
+  {
+    "selector": "[data-slot=\"button\"][data-variant=\"destructive\"]",
+    "foreground": "#30100f",
+    "background": "#ffadab",
+    "ratio": "9.79"
+  },
+  {
+    "selector": ".start-section [data-slot=\"button\"][data-variant=\"default\"]",
+    "foreground": "#f3f7ee",
+    "background": "#10190d",
+    "ratio": "16.58"
+  },
+  {
+    "selector": ".start-section [data-slot=\"button\"][data-variant=\"default\"]:hover",
+    "foreground": "#fff",
+    "background": "#293d21",
+    "ratio": "11.77"
+  },
+  {
+    "selector": "Light-section Demo badge",
+    "foreground": "#43315d",
+    "background": "#e4d9f4",
+    "ratio": "8.46"
+  },
+  {
+    "selector": ".pill.live",
+    "foreground": "#b2f3d4",
+    "background": "#173f33",
+    "ratio": "9.28"
+  },
+  {
+    "selector": ".pill.testnet",
+    "foreground": "#c0dcff",
+    "background": "#243951",
+    "ratio": "8.39"
+  },
+  {
+    "selector": ".pill.warning",
+    "foreground": "#ffe0a9",
+    "background": "#43351f",
+    "ratio": "9.33"
+  },
+  {
+    "selector": ".segmented button.active",
+    "foreground": "#edffc0",
+    "background": "#334b38",
+    "ratio": "8.92"
+  },
+  {
+    "selector": "Outline",
+    "foreground": "#f3f7ee",
+    "background": "#14212a",
+    "ratio": "15.11"
+  },
+  {
+    "selector": "Outline hover",
+    "foreground": "#ffffff",
+    "background": "#293d48",
+    "ratio": "11.32"
+  },
+  {
+    "selector": "Disabled",
+    "foreground": "#b7c5cd",
+    "background": "#28343e",
+    "ratio": "7.20"
+  },
+  {
+    "selector": "Body",
+    "foreground": "#f3f7ee",
+    "background": "#0b1218",
+    "ratio": "17.37"
+  },
+  {
+    "selector": "Secondary body",
+    "foreground": "#b5c3c8",
+    "background": "#1a2b36",
+    "ratio": "8.04"
+  },
+  {
+    "selector": "Dock",
+    "foreground": "#e9f1de",
+    "background": "#10212d",
+    "ratio": "14.17"
+  },
+  {
+    "selector": "Dark workspace Demo badge",
+    "foreground": "#e5d3ff",
+    "background": "#302640",
+    "ratio": "10.22"
+  }
+]
