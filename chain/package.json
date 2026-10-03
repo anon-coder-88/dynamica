@@ -7,14 +7,15 @@
     "test": "hardhat test solidity",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "deploy:testnet": "node --env-file=../.env ./node_modules/hardhat/dist/src/cli.js run scripts/deploy.ts --network robinhoodTestnet",
-    "interact:testnet": "node --env-file=../.env ./node_modules/hardhat/dist/src/cli.js run scripts/interact.ts --network robinhoodTestnet"
+    "interact:testnet": "node --env-file=../.env ./node_modules/hardhat/dist/src/cli.js run scripts/interact.ts --network robinhoodTestnet",
+    "journey": "hardhat run scripts/sdk-journey.ts"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^4.0.0",
+    "@nomicfoundation/hardhat-ethers": "4.2.0",
     "@openzeppelin/contracts": "5.6.1",
-    "ethers": "^6.15.0",
-    "hardhat": "^3.0.0",
+    "ethers": "6.17.0",
+    "hardhat": "3.18.1",
     "solc": "0.8.37",
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }
