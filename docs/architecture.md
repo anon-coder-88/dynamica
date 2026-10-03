@@ -1,0 +1,11 @@
+# Architecture
+
+The maintained repository uses its established paths rather than moving working code. `chain/contracts` contains first-party protocol and the explicitly named development faucet; `chain/test` contains hostile asset fixtures and maintained forge-std-based tests; `chain/script` contains a local Solidity deployment; `chain/scripts` contains established deployments/CLI and the SDK journey. `web`/`components` are the existing focused static frontend. `packages/sdk` is a typed Viem client; `packages/abi` is generated from actual Hardhat artifacts. `python` remains read-only. No indexer, runtime server or database is added.
+
+A factory creates a strategy vault, which creates its own immutable liquid reserve. Users own ERC-4626 shares; an owner configures policy; a separate operator submits bounded movement. The reserve can only transfer back to the creating vault. All assets remain available for immediate redemption. Total assets include both custody balances.
+
+The SDK checks read/signing network and account, simulates a write, requests signing, waits for an actual receipt and rejects reverted receipts. A snapshot reads one pinned block and reports its number/time and Local or Testnet status. A bounded execution identifies policy version, global execution sequence, minimum/maximum amount and deadline. Wallets still control signature/rejection; receipt timeouts are errors/unknown outcomes rather than successful completion. Consumers should reconcile the transaction hash before retrying.
+
+The focused frontend is build-verified. It uses generated ABI declarations; its operator action now calls the bounded interface. No hosted website integration or deployment was performed. The historical full website remains on `website-source`. Future website integration should import the SDK/generated ABI, supply reviewed addresses, display actual network/mode, invalidate account/network/amount previews, and preserve its existing action review and demo isolation. Do not infer a financial integration from package availability.
+
+Offchain continuous execution needs an independently operated transaction submitter. No keeper scheduler, price observer, AI agent, result verifier or external venue is bundled. The local SDK journey uses an ephemeral Hardhat EVM solely during development; it is not a runtime application backend.

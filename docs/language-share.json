@@ -1,21 +1,25 @@
 {
-  "method": "Tracked source bytes; generated artifacts, lockfiles, data, binaries and documentation excluded",
+  "tool": "GitHub Linguist",
+  "version": "9.3.0",
+  "measured_revision": "fabd6e8ad373495c75de8db3bbdbf491e2aaff27",
+  "measured_tree": "15abec5026c3a82df8a4de35795a3bcad5a2f304",
   "languages": {
-    "Solidity": 78995,
-    "TypeScript": 49902,
+    "Ruby": 61,
+    "Solidity": 92426,
+    "TypeScript": 59652,
     "HTML": 447,
     "Python": 2079,
-    "JavaScript": 1869,
-    "CSS": 6147
+    "JavaScript": 1747,
+    "CSS": 7683
   },
-  "files": {
-    "Solidity": 9,
-    "TypeScript": 13,
-    "HTML": 1,
-    "Python": 1,
-    "JavaScript": 2,
-    "CSS": 1
+  "total_eligible_bytes": 164095,
+  "solidity_percentage": 56.324689966178134,
+  "solidity_categories": {
+    "first_party_protocol": 17582,
+    "development_asset": 578,
+    "tests_and_fixtures": 73382,
+    "deployment_scripts": 884
   },
-  "total": 139439,
-  "solidityPercentage": 56.65
+  "excluded_generated_abi_bytes": 44606,
+  "default_branch_new_revision_status": "pending review and merge"
 }
