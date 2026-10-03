@@ -1,31 +1,23 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {getAddress,isAddress,parseAbi,parseUnits,formatUnits,type Address} from 'viem';
+import {getAddress,isAddress,parseUnits,formatUnits,type Address} from 'viem';
 import {useWallet,publicClient,testnet,walletClient} from '../components/dynamica/wallet';
-const abi=parseAbi([
- 'function owner() view returns (address)','function policyVersion() view returns (uint256)',
- 'function policy() view returns (address,uint16,uint64,uint64,uint64,uint256,uint256)',
- 'function previewRebalance() view returns (bool,uint256,uint8)',
- 'function idleAssets() view returns (uint256)','function reserve() view returns (address)',
- 'function windowRemaining() view returns (uint256)',
- 'function configurePolicy((address operator,uint16 reserveBps,uint64 minInterval,uint64 windowDuration,uint64 expiresAt,uint256 maxMove,uint256 windowLimit) next)',
- 'function rebalance(uint256,uint256) returns (uint256)',
- 'function revokeOperator()','function setExecutionPaused(bool)','function executionPaused() view returns (bool)'
-]);
+import {DynamicaStrategyVaultAbi as abi} from '../packages/abi/src/contracts';
 const raw=process.env.NEXT_PUBLIC_DYNAMICA_VAULT_ADDRESS||'';
 const vault=isAddress(raw)?getAddress(raw):null;
 const reasons=['Ready','Execution paused','No operator configured','Policy expired','Cooldown active','Window budget exhausted','At reserve target'];
-type State={owner:Address;operator:Address;version:bigint;target:number;idle:bigint;remaining:bigint;reserve:Address;preview:readonly[boolean,bigint,number];paused:boolean};
+type State={owner:Address;operator:Address;version:bigint;sequence:bigint;observedAt:bigint;target:number;idle:bigint;remaining:bigint;reserve:Address;preview:readonly[boolean,bigint,number];paused:boolean};
 type Action='configure'|'rebalance'|'revoke'|'pause';
 export function OperatorControls(){
  const w=useWallet(),[data,setData]=useState<State|null>(null),[operator,setOperator]=useState(''),[target,setTarget]=useState('50'),[limit,setLimit]=useState('10'),[budget,setBudget]=useState('100'),[error,setError]=useState(''),[status,setStatus]=useState(''),[hash,setHash]=useState(''),[review,setReview]=useState<Action|null>(null),[busy,setBusy]=useState(false);
  const lock=useRef(false);
  const refresh=useCallback(async()=>{if(!vault||w.chainId!==testnet.id){setData(null);return;}try{
-  const [owner,policy,version,idle,remaining,reserve,preview,paused]=await Promise.all([
+  const [owner,policy,version,idle,remaining,reserve,preview,paused,sequence,block]=await Promise.all([
    publicClient.readContract({address:vault,abi,functionName:'owner'}),publicClient.readContract({address:vault,abi,functionName:'policy'}),
    publicClient.readContract({address:vault,abi,functionName:'policyVersion'}),publicClient.readContract({address:vault,abi,functionName:'idleAssets'}),
    publicClient.readContract({address:vault,abi,functionName:'windowRemaining'}),publicClient.readContract({address:vault,abi,functionName:'reserve'}),
-   publicClient.readContract({address:vault,abi,functionName:'previewRebalance'}),publicClient.readContract({address:vault,abi,functionName:'executionPaused'})]);
-  setData({owner,operator:policy[0],version,target:policy[1],idle,remaining,reserve,preview,paused});setError('');
+   publicClient.readContract({address:vault,abi,functionName:'previewRebalance'}),publicClient.readContract({address:vault,abi,functionName:'executionPaused'}),
+   publicClient.readContract({address:vault,abi,functionName:'executionCount'}),publicClient.getBlock()]);
+  setData({owner,operator:policy[0],version,sequence,observedAt:block.timestamp,target:policy[1],idle,remaining,reserve,preview,paused});setError('');
  }catch{setData(null);setError('Operator policy could not be read. Check the configured strategy vault and refresh.');}},[w.chainId]);
  useEffect(()=>{void refresh();},[refresh]);
  useEffect(()=>{setReview(null);setData(null);setHash('');setStatus('');void refresh();},[w.address,w.chainId,refresh]);
@@ -56,7 +48,7 @@ export function OperatorControls(){
     const p=validate();const block=await publicClient.getBlock();
     tx=await client.writeContract({address:vault,abi,functionName:'configurePolicy',args:[{...p,minInterval:60n,windowDuration:3600n,expiresAt:block.timestamp+604800n}]});
    }else if(action==='rebalance'){
-    tx=await client.writeContract({address:vault,abi,functionName:'rebalance',args:[data.version,data.preview[1]]});
+    tx=await client.writeContract({address:vault,abi,functionName:'rebalanceWithBounds',args:[data.version,data.sequence,data.preview[1],data.preview[1],data.observedAt+120n]});
    }else if(action==='revoke')tx=await client.writeContract({address:vault,abi,functionName:'revokeOperator'});
    else tx=await client.writeContract({address:vault,abi,functionName:'setExecutionPaused',args:[!data.paused]});
    setHash(tx);setStatus('Submitted; waiting for confirmation…');

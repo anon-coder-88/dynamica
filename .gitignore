@@ -9,3 +9,9 @@ chain/types/
 __pycache__/
 .venv/
 coverage/
+chain/out/
+chain/forge-cache/
+chain/broadcast/
+broadcast/
+cache/
+.bundle/

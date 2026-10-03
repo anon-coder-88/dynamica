@@ -1,65 +1,67 @@
-# Dynamica utility MVP
+# Dynamica
 
-A Robinhood Chain testnet MVP derived from the Dynamica PRD: **capped strategy vaults with bounded operator permissions**.
+Dynamica explores programmable onchain finance with explicit capital and execution boundaries. This repository implements **capped ERC-4626 strategy vaults with constrained reserve operators**, grounded in the Dynamica whitepaper and website PRD. It is a local protocol extension to the website scope, with a focused static interface and typed SDK.
 
-Users claim valueless `dTEST`, approve an exact amount, deposit for ERC-4626 shares and withdraw. The owner can configure an operator's reserve target, per-call limit, window budget, cooldown and expiry; pause execution or deposits; or revoke the operator. Operators can move assets only between the vault and its fixed liquid reserve. Factory records and execution events provide onchain provenance.
+An allocator approves and deposits a standard asset, receives redeemable shares, and can exit immediately. An owner authorizes an operator's fixed-reserve target, per-call limit, window budget, cooldown and expiry. The operator can move assets only between the vault and its immutable liquid reserve. Bounded requests reject stale policy, replayed execution, expired previews and changed amounts. Pause and revocation preserve user withdrawals.
 
-This is a tested source MVP, not a deployed or audited production protocol. There is no investment yield, trading integration or background operator service. `dTEST` is a test fixture, not Dynamica's native token.
+This utility performs real EVM custody and accounting locally. The reserve generates no yield and executes no trade. No public deployment or independent audit is claimed. `dTEST` is a valueless development faucet, not Dynamica's native token; its native ticker and economics remain unconfirmed. No scheduler is bundled: an external operator must submit transactions.
 
-## Original website
+## Source and scope
 
-The full existing website is preserved on [`website-source`](https://github.com/anon-coder-88/dynamica/tree/website-source). `main` extracts its existing wallet selector, provider logic, vault transaction component, brand assets and UI components into a focused utility app. The hosted marketing website has not been replaced.
+The existing default-branch frontend and protocol are retained and strengthened. The full historical marketing website remains on [website-source](https://github.com/anon-coder-88/dynamica/tree/website-source); no hosted deployment was changed. The focused frontend here uses generated ABIs and remains static. This repository does not claim to complete all PRD website features or to integrate trading, lending, liquidity venues or AI.
 
-## Install and verify
+See [source inventory](docs/source-analysis.md) for confirmed constraints, proposed design, observed code, local demonstration behavior, infrastructure gaps and reference inspections. [MVP specification](docs/mvp-spec.md) compares candidates and defines the workflow, requirements, accounting, permissions and acceptance criteria.
 
-Use Node.js 24, npm and Python 3.10+.
+## Setup and verification
+
+Use Node **24.19.0**, npm **11.9.0** and Foundry **1.7.1**. All npm dependencies use exact versions and lockfiles; forge-std **1.17.0** is pinned by git submodule. No signing key is needed for local tests or the SDK journey.
 
 ```sh
+git submodule update --init --recursive
 npm ci
 npm ci --prefix chain
-npm run build
 npm --prefix chain run build
+npm run abi
+forge fmt --check
 npm run test:contracts
-npm run check:languages
-cd chain
-npx hardhat run scripts/smoke.ts
-cd ..
+npm run check:sdk
+npm run test:sdk
+npx tsc -p chain/tsconfig.json --noEmit
+npm run journey
+npm run build
 ```
 
-The Solidity suite has 94 tests, including five fuzz tests with 256 runs each. Solidity source, including its tests, exceeds 50% of authored code bytes; see [verification](docs/VERIFICATION.md). No language overrides, duplicated contracts or vendored Solidity are used to inflate that share.
+`npm run journey` executes factory creation → faucet claim → exact approval → deposit → owner authorization → bounded rebalance → replay rejection → revoke/pause → full redemption on an ephemeral Local 31337 chain. It verifies receipt events, permissions, network rejection and final asset conservation through the typed SDK. It is a genuine local demonstration, not a public transaction record.
 
-## Deploy to Robinhood Testnet
+Actual results and limitations are in [validation](docs/validation.md). The canonical Foundry suite includes unit, fuzz and stateful invariant tests using maintained forge-std. Build output and fixtures do not establish production readiness.
 
-1. Copy `.env.example` to `.env` and set `DEPLOYER_PRIVATE_KEY` for a testnet-only account. Never commit it. Fund that account with testnet ETH from the [official faucet](https://faucet.testnet.chain.robinhood.com).
-2. Run `npm --prefix chain run deploy:testnet`. This creates the test asset, factory, strategy vault and reserve. No operator is enabled by deployment.
-3. Copy the printed asset/vault addresses into the public address fields and `DYNAMICA_VAULT_ADDRESS` in `.env`.
-4. Run `npm run dev`, open the printed local URL, connect a wallet, switch to Robinhood Testnet and claim test assets. Review approval, deposit and withdrawal separately.
-5. Connect as the deployed vault owner to authorize an operator policy. Connect as that operator to review a rebalance. Pause/revoke remain owner actions. A scheduler must submit transactions for continuous execution.
-
-Default network: chain ID **46630**, ETH gas, `https://rpc.testnet.chain.robinhood.com`. Mainnet deployment is blocked by the deployment script.
-
-For CLI actions, set `DYNAMICA_ACTION` to `status`, `claim`, `deposit`, `withdraw` or `rebalance`, then run `npm --prefix chain run interact:testnet`. `DYNAMICA_AMOUNT` uses 18-decimal dTEST units in human-readable form.
-
-## Read with Python
+For language measurement, use Ruby 3.2 and Bundler 2.5.23:
 
 ```sh
-python -m venv .venv
-. .venv/bin/activate
-pip install -r python/requirements.txt
-# Set DYNAMICA_VAULT_ADDRESS and optionally DYNAMICA_ACCOUNT_ADDRESS
-python python/vault_status.py
+bundle install
+npm run check:languages
 ```
 
-The helper reads public state and never signs. It reads environment variables from your shell, not `.env` automatically. Outputs are raw integer units, not market prices. `DYNAMICA_LOCAL=1` permits an explicit local chain (31337) when `RH_TESTNET_RPC_URL` points to it.
+This invokes actual GitHub Linguist 9.3.0. [Language report](docs/language-report.md) separates first-party protocol, tests/scripts, other languages and exclusions. Compiler-generated ABI declarations are honestly marked generated. Genuine frontend/SDK code is not overridden or hidden. GitHub's language statistics concern its default branch; a review branch does not establish default-branch acceptance for this revision.
 
-## Files and limits
+## Repository layout
 
-- `chain/contracts/`: original capped vault and test asset; new policy vault, fixed reserve and factory.
-- `chain/test/`: accounting, operator policy, adversarial transfer and factory tests.
-- `chain/scripts/`: TypeScript deploy, interaction and local integration scripts.
-- `components/`, `web/`, `index.html`: reused React wallet/vault code plus the utility shell and operator controls.
-- `python/`: web3.py read helper; `scripts/`: JavaScript ABI export and language-share checks.
+| Path | Purpose |
+| --- | --- |
+| chain/contracts | Protocol vault/reserve/factory; explicitly named development faucet |
+| chain/test | Unit/fuzz/invariant tests and isolated hostile token fixtures |
+| chain/script, chain/scripts | Local Solidity deployment, established CLI/deployment and SDK journey |
+| web, components, public | Existing focused React/Vite interface and assets |
+| packages/sdk | Typed Viem interactions, strict amount parser and tests |
+| packages/abi | Actual generated contract ABIs |
+| python | Existing read-only status helper |
+| docs | Source analysis, MVP, architecture, contracts, deployment, security and validation |
+| .github/workflows | Build, ABI consistency, formatting, tests and language checks |
 
-Only standard, non-rebasing ERC-20 assets are supported. Transfer fees are rejected. Owners can replace policies immediately, which resets the budget. Targets are rebalancing goals, not a continuously enforced reserve ratio. The fixed reserve is fully liquid; operators cannot choose arbitrary calls or destinations. See [PRD scope mapping](docs/MVP.md).
+## Integration and trust boundaries
 
-MIT license. Third-party dependencies retain their own licenses; wallet marks identify their respective providers.
+Only standard non-rebasing exact-transfer ERC-20 assets are supported; transfer taxes are rejected where detected. The owner can replace policy immediately, resetting its budget and cooldown, and change capacity or pauses. There is no governance timelock, upgrade, fee or arbitrary execution router. The fixed liquid reserve is recoverable during withdrawals; external investment venues would need a separate withdrawal/risk design. Targets are per-execution rebalancing goals, not continuous ratio guarantees. The legacy recurring `rebalance` entry point retains its deliberate recurring semantics; the SDK and focused operator UI use `rebalanceWithBounds`.
+
+Public network decisions, approved assets/risk parameters, funded signer, deployment, executor operation and independent review remain open. [Deployment guide](docs/deployment.md) documents reproducible local commands and future testnet preparation; this request does not authorize public deployment. Browser wallet journeys, accessibility, responsive behavior and public provider reliability have not been runtime validated here. No database or runtime server was added.
+
+Read [architecture](docs/architecture.md), [contract interfaces](docs/contracts.md) and [security model](docs/security.md) before integration. Contribute through reviewable pull requests using [Conventional Commits](CONTRIBUTING.md). MIT license; upstream licenses and existing provider marks retain their rights; see [attribution](NOTICE.md) and [security reporting](SECURITY.md).

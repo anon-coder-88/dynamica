@@ -1,0 +1,2 @@
+# Compiler-generated ABI declarations; regenerate with npm run abi.
+packages/abi/src/contracts.ts linguist-generated=true

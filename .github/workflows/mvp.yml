@@ -1,23 +1,42 @@
-name: MVP verification
+name: Protocol verification
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 24.19.0
           cache: npm
           cache-dependency-path: |
             package-lock.json
             chain/package-lock.json
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
       - run: npm ci
       - run: npm ci --prefix chain
-      - run: npm run build
       - run: npm --prefix chain run build
-      - run: npm run test:contracts
-      - run: node scripts/language-share.mjs
+      - run: npm run abi
+      - run: git diff --exit-code -- packages/abi/src/contracts.ts python/vault_read_abi.json
+      - run: forge fmt --check
+      - run: forge test -vv
+      - run: npm run check:sdk
+      - run: npm run test:sdk
+      - run: npx tsc -p chain/tsconfig.json --noEmit
+      - run: npm run journey
+      - run: npm run build
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler: '2.5.23'
+          bundler-cache: true
+      - run: npm run check:languages
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

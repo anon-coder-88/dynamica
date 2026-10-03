@@ -29,8 +29,15 @@ contract OperatorPolicyTest is TestSupport {
     function testConfigurationStoresAndVersionsAllParameters() public {
         DynamicaStrategyVault.Policy memory p = policy(5000, 10 ether, 30 ether);
         vault.configurePolicy(p);
-        (address operator, uint16 target, uint64 interval, uint64 duration, uint64 expiry,
-            uint256 limit, uint256 budget) = vault.policy();
+        (
+            address operator,
+            uint16 target,
+            uint64 interval,
+            uint64 duration,
+            uint64 expiry,
+            uint256 limit,
+            uint256 budget
+        ) = vault.policy();
         assertEq(operator, KEEPER, "Operator address was not stored");
         assertEq(target, 5000, "Reserve target was not stored");
         assertEq(interval, 60, "Execution interval was not stored");
@@ -158,8 +165,11 @@ contract OperatorPolicyTest is TestSupport {
         configure(5000, 10 ether, 30 ether);
         rebalance();
         assertReason(DynamicaStrategyVault.BlockReason.Cooldown);
-        vm.expectRevert(abi.encodeWithSelector(DynamicaStrategyVault.ExecutionBlocked.selector,
-            DynamicaStrategyVault.BlockReason.Cooldown));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DynamicaStrategyVault.ExecutionBlocked.selector, DynamicaStrategyVault.BlockReason.Cooldown
+            )
+        );
         vm.prank(KEEPER);
         vault.rebalance(1, 0);
         assertEq(vault.executionCount(), 1, "Cooldown failure created an execution record");
@@ -200,8 +210,12 @@ contract OperatorPolicyTest is TestSupport {
         rebalance();
         vm.warp(block.timestamp + 60);
         assertReason(DynamicaStrategyVault.BlockReason.WindowExhausted);
-        vm.expectRevert(abi.encodeWithSelector(DynamicaStrategyVault.ExecutionBlocked.selector,
-            DynamicaStrategyVault.BlockReason.WindowExhausted));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DynamicaStrategyVault.ExecutionBlocked.selector,
+                DynamicaStrategyVault.BlockReason.WindowExhausted
+            )
+        );
         vm.prank(KEEPER);
         vault.rebalance(1, 0);
         assertEq(reserve.totalAssets(), 10 ether, "Budget-exhausted call moved assets");
@@ -238,7 +252,7 @@ contract OperatorPolicyTest is TestSupport {
     function testTargetClampsMovementBelowPerCallCap() public {
         depositAlice(100 ether);
         configure(1234, 50 ether, 100 ether);
-        (,uint256 preview,) = vault.previewRebalance();
+        (, uint256 preview,) = vault.previewRebalance();
         assertEq(preview, 12.34 ether, "Target difference must clamp per-call limit");
         assertEq(rebalance(), 12.34 ether, "Execution overshot reserve target");
         vm.warp(block.timestamp + 60);
@@ -276,8 +290,11 @@ contract OperatorPolicyTest is TestSupport {
         vault.setExecutionPaused(true);
         assertReason(DynamicaStrategyVault.BlockReason.Paused);
         assertTrue(vault.maxDeposit(BOB) > 0, "Execution pause wrongly closes deposits");
-        vm.expectRevert(abi.encodeWithSelector(DynamicaStrategyVault.ExecutionBlocked.selector,
-            DynamicaStrategyVault.BlockReason.Paused));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DynamicaStrategyVault.ExecutionBlocked.selector, DynamicaStrategyVault.BlockReason.Paused
+            )
+        );
         vm.prank(KEEPER);
         vault.rebalance(1, 0);
         vault.setExecutionPaused(false);
@@ -306,8 +323,11 @@ contract OperatorPolicyTest is TestSupport {
         assertReason(DynamicaStrategyVault.BlockReason.Ready);
         vm.warp(p.expiresAt);
         assertReason(DynamicaStrategyVault.BlockReason.Expired);
-        vm.expectRevert(abi.encodeWithSelector(DynamicaStrategyVault.ExecutionBlocked.selector,
-            DynamicaStrategyVault.BlockReason.Expired));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DynamicaStrategyVault.ExecutionBlocked.selector, DynamicaStrategyVault.BlockReason.Expired
+            )
+        );
         vm.prank(KEEPER);
         vault.rebalance(1, 0);
         assertEq(vault.executionCount(), 0, "Expired execution created a record");
@@ -341,7 +361,9 @@ contract OperatorPolicyTest is TestSupport {
         configure(5000, 10 ether, 20 ether);
         uint256 oldVersion = vault.policyVersion();
         configure(6000, 20 ether, 40 ether);
-        vm.expectRevert(abi.encodeWithSelector(DynamicaStrategyVault.StalePolicy.selector, oldVersion, oldVersion + 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(DynamicaStrategyVault.StalePolicy.selector, oldVersion, oldVersion + 1)
+        );
         vm.prank(KEEPER);
         vault.rebalance(oldVersion, 0);
         assertEq(vault.windowSpent(), 0, "Stale execution consumed new policy credit");
@@ -460,7 +482,8 @@ contract OperatorPolicyTest is TestSupport {
 
     function testFeeOnTransferReserveAllocationRevertsEntireExecution() public {
         FeeAsset fee = new FeeAsset();
-        DynamicaStrategyVault taxed = new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
+        DynamicaStrategyVault taxed =
+            new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
         fee.mint(ALICE, 100 ether);
         vm.startPrank(ALICE);
         fee.approve(address(taxed), 100 ether);
@@ -475,12 +498,15 @@ contract OperatorPolicyTest is TestSupport {
         assertEq(taxed.windowSpent(), 0, "Failed reserve transfer consumed budget");
         assertEq(taxed.executionCount(), 0, "Failed reserve transfer created a record");
         assertEq(taxed.totalAssets(), 100 ether, "Failed reserve transfer burned custody assets");
-        assertEq(fee.allowance(address(taxed), address(taxed.reserve())), 0, "Failed execution retained approval");
+        assertEq(
+            fee.allowance(address(taxed), address(taxed.reserve())), 0, "Failed execution retained approval"
+        );
     }
 
     function testReentrancyDuringReserveAllocationIsBlocked() public {
         ReenterAsset callback = new ReenterAsset();
-        DynamicaStrategyVault guarded = new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
+        DynamicaStrategyVault guarded =
+            new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
         callback.mint(ALICE, 100 ether);
         vm.startPrank(ALICE);
         callback.approve(address(guarded), 100 ether);
@@ -492,21 +518,27 @@ contract OperatorPolicyTest is TestSupport {
         vm.prank(KEEPER);
         guarded.rebalance(version, 0);
         assertTrue(callback.blocked(), "Reserve allocation allowed reentrant vault deposit");
-        assertTrue(callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")), "Callback failed for another reason instead of the reentrancy guard");
+        assertTrue(
+            callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")),
+            "Callback failed for another reason instead of the reentrancy guard"
+        );
         assertEq(guarded.totalAssets(), 100 ether, "Reentrant callback changed managed assets");
         assertEq(guarded.totalSupply(), 100 ether, "Reentrant callback changed outstanding shares");
     }
 
-    function testFuzzRebalanceRespectsLimitsAndConservesAssets(uint96 amountSeed, uint16 targetSeed,
-        uint96 capSeed, uint96 budgetSeed) public
-    {
+    function testFuzzRebalanceRespectsLimitsAndConservesAssets(
+        uint96 amountSeed,
+        uint16 targetSeed,
+        uint96 capSeed,
+        uint96 budgetSeed
+    ) public {
         uint256 amount = uint256(amountSeed) % (500 ether) + 1 ether;
         uint16 target = uint16(uint256(targetSeed) % 8001);
         uint256 moveLimit = uint256(capSeed) % amount + 1;
         uint256 budget = moveLimit + uint256(budgetSeed) % amount;
         depositAlice(amount);
         configure(target, moveLimit, budget);
-        (,uint256 preview,DynamicaStrategyVault.BlockReason reason) = vault.previewRebalance();
+        (, uint256 preview, DynamicaStrategyVault.BlockReason reason) = vault.previewRebalance();
         if (reason == DynamicaStrategyVault.BlockReason.Ready) {
             uint256 moved = rebalance();
             assertEq(moved, preview, "Execution diverges from fresh preview");
@@ -514,7 +546,9 @@ contract OperatorPolicyTest is TestSupport {
             assertTrue(moved <= budget, "Execution exceeds window cap");
             assertEq(vault.windowSpent(), moved, "Window accounting diverges from movement");
         } else {
-            assertTrue(reason == DynamicaStrategyVault.BlockReason.AtTarget, "Unexpected initial block reason");
+            assertTrue(
+                reason == DynamicaStrategyVault.BlockReason.AtTarget, "Unexpected initial block reason"
+            );
         }
         assertConservation(amount);
         assertEq(vault.maxWithdraw(ALICE), amount, "Allocation changed withdrawable principal");
@@ -523,9 +557,11 @@ contract OperatorPolicyTest is TestSupport {
         assertConservation(0);
     }
 
-    function testFuzzRepeatedMovesNeverExceedWindowBudget(uint96 amountSeed, uint96 moveSeed,
-        uint96 budgetSeed) public
-    {
+    function testFuzzRepeatedMovesNeverExceedWindowBudget(
+        uint96 amountSeed,
+        uint96 moveSeed,
+        uint96 budgetSeed
+    ) public {
         uint256 amount = uint256(amountSeed) % (500 ether) + 10 ether;
         uint256 moveLimit = uint256(moveSeed) % (amount / 5) + 1;
         uint256 budget = moveLimit + uint256(budgetSeed) % (amount / 2);
@@ -533,7 +569,7 @@ contract OperatorPolicyTest is TestSupport {
         configure(8000, moveLimit, budget);
         uint256 aggregate;
         for (uint256 i; i < 10; i++) {
-            (,,DynamicaStrategyVault.BlockReason reason) = vault.previewRebalance();
+            (,, DynamicaStrategyVault.BlockReason reason) = vault.previewRebalance();
             if (reason != DynamicaStrategyVault.BlockReason.Ready) break;
             aggregate += rebalance();
             assertTrue(aggregate <= budget, "Repeated calls exceeded cumulative budget");

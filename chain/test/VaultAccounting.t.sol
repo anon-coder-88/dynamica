@@ -246,8 +246,10 @@ contract VaultAccountingTest is TestSupport {
         depositAlice(100 ether);
         token.mint(address(reserve), 25 ether);
         assertConservation(125 ether);
-        assertTrue(vault.previewRedeem(vault.balanceOf(ALICE)) > 124 ether,
-            "Reserve donation was omitted from share valuation");
+        assertTrue(
+            vault.previewRedeem(vault.balanceOf(ALICE)) > 124 ether,
+            "Reserve donation was omitted from share valuation"
+        );
     }
 
     function testSixDecimalAssetUsesItsOwnUnits() public {
@@ -287,7 +289,8 @@ contract VaultAccountingTest is TestSupport {
 
     function testFeeOnTransferDepositIsRejectedAtomically() public {
         FeeAsset fee = new FeeAsset();
-        DynamicaStrategyVault taxed = new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
+        DynamicaStrategyVault taxed =
+            new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
         fee.mint(ALICE, 100 ether);
         fee.setFees(true);
         vm.prank(ALICE);
@@ -302,7 +305,8 @@ contract VaultAccountingTest is TestSupport {
 
     function testFeeOnTransferWithdrawalCannotBurnSharesForLessAssets() public {
         FeeAsset fee = new FeeAsset();
-        DynamicaStrategyVault taxed = new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
+        DynamicaStrategyVault taxed =
+            new DynamicaStrategyVault(IERC20(address(fee)), 1000 ether, address(this));
         fee.mint(ALICE, 100 ether);
         vm.startPrank(ALICE);
         fee.approve(address(taxed), 100 ether);
@@ -318,7 +322,8 @@ contract VaultAccountingTest is TestSupport {
 
     function testFalseReturningAssetFailsSafeTransfer() public {
         FalseReturnAsset bad = new FalseReturnAsset();
-        DynamicaStrategyVault invalid = new DynamicaStrategyVault(IERC20(address(bad)), 1000 ether, address(this));
+        DynamicaStrategyVault invalid =
+            new DynamicaStrategyVault(IERC20(address(bad)), 1000 ether, address(this));
         bad.mint(ALICE, 100 ether);
         vm.prank(ALICE);
         bad.approve(address(invalid), 100 ether);
@@ -330,7 +335,8 @@ contract VaultAccountingTest is TestSupport {
 
     function testReentrantDepositCallbackIsBlocked() public {
         ReenterAsset callback = new ReenterAsset();
-        DynamicaStrategyVault guarded = new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
+        DynamicaStrategyVault guarded =
+            new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
         callback.mint(ALICE, 100 ether);
         callback.arm(address(guarded));
         vm.startPrank(ALICE);
@@ -339,14 +345,18 @@ contract VaultAccountingTest is TestSupport {
         vm.stopPrank();
         assertTrue(callback.attempted(), "Malicious asset never attempted its callback");
         assertTrue(callback.blocked(), "Reentrant deposit callback was not blocked");
-        assertTrue(callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")), "Callback failed for another reason instead of the reentrancy guard");
+        assertTrue(
+            callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")),
+            "Callback failed for another reason instead of the reentrancy guard"
+        );
         assertEq(guarded.totalAssets(), 100 ether, "Reentrant attempt broke asset accounting");
         assertEq(guarded.totalSupply(), 100 ether, "Reentrant attempt broke share accounting");
     }
 
     function testReentrantWithdrawalCallbackIsBlocked() public {
         ReenterAsset callback = new ReenterAsset();
-        DynamicaStrategyVault guarded = new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
+        DynamicaStrategyVault guarded =
+            new DynamicaStrategyVault(IERC20(address(callback)), 1000 ether, address(this));
         callback.mint(ALICE, 100 ether);
         vm.startPrank(ALICE);
         callback.approve(address(guarded), 100 ether);
@@ -356,7 +366,10 @@ contract VaultAccountingTest is TestSupport {
         vm.prank(ALICE);
         guarded.withdraw(100 ether, ALICE, ALICE);
         assertTrue(callback.blocked(), "Reentrant withdrawal callback was not blocked");
-        assertTrue(callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")), "Callback failed for another reason instead of the reentrancy guard");
+        assertTrue(
+            callback.callbackError() == bytes4(keccak256("ReentrancyGuardReentrantCall()")),
+            "Callback failed for another reason instead of the reentrancy guard"
+        );
         assertEq(guarded.totalAssets(), 0, "Callback left assets after full withdrawal");
         assertEq(guarded.totalSupply(), 0, "Callback left shares after full withdrawal");
     }

@@ -1,22 +1,10 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatUnits, getAddress, isAddress, parseAbi, parseUnits, type Address } from 'viem';
+import { formatUnits, getAddress, isAddress, parseUnits, type Address } from 'viem';
 import { publicClient, testnet, useWallet, walletClient, openWalletDialog } from './wallet';
 
-const vaultAbi = parseAbi([
-  'function asset() view returns (address)', 'function totalAssets() view returns (uint256)',
-  'function assetCap() view returns (uint256)', 'function depositsPaused() view returns (bool)',
-  'function balanceOf(address) view returns (uint256)', 'function maxDeposit(address) view returns (uint256)',
-  'function maxWithdraw(address) view returns (uint256)',
-  'function previewDeposit(uint256) view returns (uint256)', 'function previewWithdraw(uint256) view returns (uint256)',
-  'function deposit(uint256,address) returns (uint256)', 'function withdraw(uint256,address,address) returns (uint256)',
-]);
-const assetAbi = parseAbi([
-  'function decimals() view returns (uint8)', 'function symbol() view returns (string)',
-  'function balanceOf(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)',
-  'function claimed(address) view returns (bool)', 'function claim()',
-  'function approve(address,uint256) returns (bool)',
-]);
+import {DynamicaStrategyVaultAbi as vaultAbi, DynamicaTestAssetAbi as assetAbi} from '../../packages/abi/src/contracts';
+
 const rawVault = process.env.NEXT_PUBLIC_DYNAMICA_VAULT_ADDRESS || '';
 const rawAsset = process.env.NEXT_PUBLIC_DYNAMICA_ASSET_ADDRESS || '';
 type Snapshot = { wallet:bigint; shares:bigint; withdrawable:bigint; capacity:bigint; allowance:bigint; total:bigint; paused:boolean; claimed:boolean; decimals:number; symbol:string; at:Date };

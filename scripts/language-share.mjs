@@ -1,18 +1,8 @@
-// Count tracked/source bytes using GitHub's byte-based language statistic convention.
-// This MVP contains no language overrides or vendored Solidity.
-import {execFile} from 'node:child_process';
-import {promisify} from 'node:util';
-import {readFileSync,existsSync} from 'node:fs';
-const extensions={sol:'Solidity',ts:'TypeScript',tsx:'TypeScript',js:'JavaScript',mjs:'JavaScript',css:'CSS',html:'HTML',py:'Python'};
-const {stdout}=await promisify(execFile)('git',['ls-files','--cached','--others','--exclude-standard','-z']);
-const paths=stdout.split('\0').filter(Boolean);
-const languages={},counts={};
-for(const path of new Set(paths)){
- if(!existsSync(path)||path.startsWith('docs/'))continue;
- const language=extensions[path.split('.').pop()];if(!language)continue;
- const bytes=readFileSync(path).length;languages[language]=(languages[language]||0)+bytes;counts[language]=(counts[language]||0)+1;
-}
-const total=Object.values(languages).reduce((sum,value)=>sum+value,0);
-const percentage=100*(languages.Solidity||0)/total;
-console.log(JSON.stringify({method:'Tracked source bytes; generated artifacts, lockfiles, data, binaries and documentation excluded',languages,files:counts,total,solidityPercentage:Number(percentage.toFixed(2))},null,2));
-if(percentage<50){console.error('Solidity source share must be at least 50%.');process.exitCode=1;}
+// Use actual GitHub Linguist, not an extension-only approximation.
+import {execFileSync} from 'node:child_process';
+const data=JSON.parse(execFileSync('bundle',['exec','github-linguist','--json'],{encoding:'utf8'}));
+const languages=Object.fromEntries(Object.entries(data).map(([name,stats])=>[name,stats.size]));
+const total=Object.values(languages).reduce((a,b)=>a+b,0);
+const solidity=languages.Solidity||0;
+console.log(JSON.stringify({tool:'GitHub Linguist 9.3.0',revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),languages,total,solidityPercentage:100*solidity/total},null,2));
+if(total===0||solidity/total<0.5)throw new Error('Eligible Solidity share is below 50%');
