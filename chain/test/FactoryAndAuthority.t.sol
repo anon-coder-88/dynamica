@@ -9,6 +9,7 @@ import {DynamicaTestAsset} from "../contracts/DynamicaTestAsset.sol";
 
 contract FactoryAndAuthorityTest is TestSupport {
     DynamicaVaultFactory internal factory;
+
     function setUp() public override {
         super.setUp();
         factory = new DynamicaVaultFactory();

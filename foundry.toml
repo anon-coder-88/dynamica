@@ -1,0 +1,24 @@
+[profile.default]
+src = "chain/contracts"
+test = "chain/test"
+script = "chain/script"
+out = "chain/out"
+cache_path = "chain/forge-cache"
+libs = ["chain/lib", "chain/node_modules"]
+solc = "0.8.37"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+remappings = ["@openzeppelin/contracts/=chain/node_modules/@openzeppelin/contracts/", "forge-std/=chain/lib/forge-std/src/"]
+
+[profile.default.fuzz]
+runs = 256
+seed = "0xd1a"
+
+[profile.default.invariant]
+runs = 128
+depth = 64
+fail_on_revert = true
+
+[fmt]
+line_length = 110

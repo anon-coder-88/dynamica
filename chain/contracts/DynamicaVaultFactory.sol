@@ -22,8 +22,9 @@ contract DynamicaVaultFactory {
     error DuplicateSalt();
     error PageTooLarge();
 
-    event VaultCreated(address indexed vault, address indexed asset, address indexed creator,
-        bytes32 salt, uint256 assetCap);
+    event VaultCreated(
+        address indexed vault, address indexed asset, address indexed creator, bytes32 salt, uint256 assetCap
+    );
 
     function createVault(IERC20 asset, uint256 cap, bytes32 salt) external returns (address deployed) {
         if (address(asset).code.length == 0) revert InvalidAsset();
@@ -37,12 +38,16 @@ contract DynamicaVaultFactory {
     }
 
     function predictVault(IERC20 asset, uint256 cap, address creator, bytes32 salt)
-        external view returns (address)
+        external
+        view
+        returns (address)
     {
         bytes32 key = keccak256(abi.encode(creator, salt));
-        bytes32 initHash = keccak256(abi.encodePacked(type(DynamicaStrategyVault).creationCode,
-            abi.encode(asset, cap, creator)));
-        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), key, initHash)))));
+        bytes32 initHash = keccak256(
+            abi.encodePacked(type(DynamicaStrategyVault).creationCode, abi.encode(asset, cap, creator))
+        );
+        return
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), key, initHash)))));
     }
 
     function vaultCount() external view returns (uint256) {
@@ -60,6 +65,8 @@ contract DynamicaVaultFactory {
         uint256 length = records.length - offset;
         if (length > limit) length = limit;
         page = new Record[](length);
-        for (uint256 i; i < length; i++) page[i] = records[offset + i];
+        for (uint256 i; i < length; i++) {
+            page[i] = records[offset + i];
+        }
     }
 }

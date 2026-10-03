@@ -55,18 +55,34 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
     error Slippage(uint256 minimum, uint256 actual);
     error ZeroAmount();
     error UnsupportedTransfer();
+    error StaleExecution(uint256 expected, uint256 actual);
+    error ExpiredRequest();
+    error InvalidBounds();
 
-    event PolicyConfigured(uint256 indexed version, address indexed operator, uint16 reserveBps,
-        uint64 minInterval, uint64 windowDuration, uint64 expiresAt, uint256 maxMove, uint256 windowLimit);
+    event PolicyConfigured(
+        uint256 indexed version,
+        address indexed operator,
+        uint16 reserveBps,
+        uint64 minInterval,
+        uint64 windowDuration,
+        uint64 expiresAt,
+        uint256 maxMove,
+        uint256 windowLimit
+    );
     event OperatorRevoked(uint256 indexed version);
     event ExecutionPaused(bool paused);
-    event Rebalanced(uint256 indexed sequence, uint256 indexed version, address indexed operator,
-        bool toReserve, uint256 assets, uint256 idleAfter, uint256 reserveAfter);
+    event Rebalanced(
+        uint256 indexed sequence,
+        uint256 indexed version,
+        address indexed operator,
+        bool toReserve,
+        uint256 assets,
+        uint256 idleAfter,
+        uint256 reserveAfter
+    );
     event ReserveRecalledForWithdrawal(uint256 assets);
 
-    constructor(IERC20 asset_, uint256 cap_, address owner_)
-        DynamicaVault(asset_, cap_, owner_)
-    {
+    constructor(IERC20 asset_, uint256 cap_, address owner_) DynamicaVault(asset_, cap_, owner_) {
         reserve = new DynamicaReserve(asset_);
     }
 
@@ -86,16 +102,23 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
             next.operator == address(0) || next.reserveBps > MAX_RESERVE_BPS
                 || next.windowDuration < MIN_WINDOW || next.windowDuration > MAX_WINDOW
                 || next.minInterval == 0 || next.minInterval > next.windowDuration
-                || next.expiresAt <= block.timestamp || next.maxMove == 0
-                || next.windowLimit < next.maxMove
+                || next.expiresAt <= block.timestamp || next.maxMove == 0 || next.windowLimit < next.maxMove
         ) revert InvalidPolicy();
         policy = next;
         policyVersion++;
         windowStartedAt = block.timestamp;
         windowSpent = 0;
         lastExecutionAt = 0;
-        emit PolicyConfigured(policyVersion, next.operator, next.reserveBps, next.minInterval,
-            next.windowDuration, next.expiresAt, next.maxMove, next.windowLimit);
+        emit PolicyConfigured(
+            policyVersion,
+            next.operator,
+            next.reserveBps,
+            next.minInterval,
+            next.windowDuration,
+            next.expiresAt,
+            next.maxMove,
+            next.windowLimit
+        );
     }
 
     // Existing assets remain redeemable after revocation or either pause control.
@@ -139,7 +162,32 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
     /// @notice Operators submit ordinary transactions; external scheduling is required.
     /// @param expectedVersion Reject a transaction prepared for an old policy.
     /// @param minMoved Protect the caller against a changed balance/preview.
-    function rebalance(uint256 expectedVersion, uint256 minMoved) external nonReentrant returns (uint256 assets) {
+    function rebalance(uint256 expectedVersion, uint256 minMoved)
+        external
+        nonReentrant
+        returns (uint256 assets)
+    {
+        return _rebalance(expectedVersion, minMoved);
+    }
+
+    /// @notice Execute a preview once, before its deadline and within caller bounds.
+    /// @dev Legacy rebalance remains available for deliberate recurring keeper calls.
+    /// Sequence is global across policy changes; revocation never rewinds it.
+    function rebalanceWithBounds(
+        uint256 expectedVersion,
+        uint256 expectedSequence,
+        uint256 minMoved,
+        uint256 maxMoved,
+        uint256 deadline
+    ) external nonReentrant returns (uint256 assets) {
+        if (block.timestamp > deadline) revert ExpiredRequest();
+        if (minMoved == 0 || maxMoved < minMoved) revert InvalidBounds();
+        if (expectedSequence != executionCount) revert StaleExecution(expectedSequence, executionCount);
+        assets = _rebalance(expectedVersion, minMoved);
+        if (assets > maxMoved) revert Slippage(maxMoved, assets);
+    }
+
+    function _rebalance(uint256 expectedVersion, uint256 minMoved) internal returns (uint256 assets) {
         if (msg.sender != policy.operator) revert OnlyOperator();
         if (expectedVersion != policyVersion) revert StalePolicy(expectedVersion, policyVersion);
         bool toReserve;
@@ -165,8 +213,9 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
         } else {
             reserve.recall(assets);
         }
-        emit Rebalanced(executionCount, policyVersion, msg.sender, toReserve, assets,
-            idleAssets(), reserve.totalAssets());
+        emit Rebalanced(
+            executionCount, policyVersion, msg.sender, toReserve, assets, idleAssets(), reserve.totalAssets()
+        );
     }
 
     // Guard every standard ERC-4626 write, including delegated withdrawals.
@@ -178,22 +227,36 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
         return super.mint(shares, receiver);
     }
 
-    function withdraw(uint256 assets, address receiver, address owner_) public override nonReentrant returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner_)
+        public
+        override
+        nonReentrant
+        returns (uint256)
+    {
         return super.withdraw(assets, receiver, owner_);
     }
 
-    function redeem(uint256 shares, address receiver, address owner_) public override nonReentrant returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner_)
+        public
+        override
+        nonReentrant
+        returns (uint256)
+    {
         return super.redeem(shares, receiver, owner_);
     }
 
     // Optional bounds for callers requiring on-chain protection of a preview.
-    function depositWithMinShares(uint256 assets, address receiver, uint256 minShares) external returns (uint256 shares) {
+    function depositWithMinShares(uint256 assets, address receiver, uint256 minShares)
+        external
+        returns (uint256 shares)
+    {
         shares = deposit(assets, receiver);
         if (shares < minShares) revert Slippage(minShares, shares);
     }
 
     function redeemWithMinAssets(uint256 shares, address receiver, address owner_, uint256 minAssets)
-        external returns (uint256 assets)
+        external
+        returns (uint256 assets)
     {
         assets = redeem(shares, receiver, owner_);
         if (assets < minAssets) revert Slippage(minAssets, assets);
@@ -207,7 +270,8 @@ contract DynamicaStrategyVault is DynamicaVault, ReentrancyGuard {
     }
 
     function _withdraw(address caller, address receiver, address owner_, uint256 assets, uint256 shares)
-        internal override
+        internal
+        override
     {
         if (assets == 0 || shares == 0) revert ZeroAmount();
         uint256 idle = idleAssets();
